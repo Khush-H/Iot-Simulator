@@ -1,0 +1,1112 @@
+<!-- Dashboard/templates/index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IoT Threat Monitoring Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Simple, clean styling -->
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            color: #e5e7eb;
+            overflow-x: hidden;
+            max-width: 100vw;
+            box-sizing: border-box;
+        }
+
+        header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #1f2937;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #020617;
+        }
+
+        header h1 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        header span {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        main {
+            padding: 16px 24px 32px;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            grid-template-rows: auto auto;
+            gap: 16px;
+            max-width: 100vw;
+            box-sizing: border-box;
+        }
+
+        .card {
+            background: #020617;
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid #1f2937;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .card h2 {
+            font-size: 16px;
+            margin: 0 0 12px;
+            color: #e5e7eb;
+        }
+
+        .card small {
+            color: #6b7280;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            table-layout: fixed;
+        }
+
+        th, td {
+            padding: 8px 6px;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Column widths for Active Devices table */
+        tbody tr td:nth-child(1) { width: 12%; } /* Device ID */
+        tbody tr td:nth-child(2) { width: 10%; } /* Status */
+        tbody tr td:nth-child(3) { width: 15%; } /* Last Topic */
+        tbody tr td:nth-child(4) { width: 25%; white-space: nowrap; } /* Payload */
+        tbody tr td:nth-child(5) { width: 12%; } /* Attacks */
+        tbody tr td:nth-child(6) { width: 16%; } /* Last Vulnerability */
+        tbody tr td:nth-child(7) { width: 10%; } /* Last Seen */
+
+        th {
+            border-bottom: 1px solid #1f2937;
+            color: #9ca3af;
+        }
+
+        tr:nth-child(even) {
+            background: #020618;
+        }
+
+        tr.selected {
+            background: #1e3a5f !important;
+            border-left: 3px solid #3b82f6;
+        }
+
+        tbody tr {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #1a2332;
+        }
+
+        .vulnerable-device {
+            border-left: 3px solid #dc2626;
+            animation: pulse-vulnerable 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-vulnerable {
+            0%, 100% { 
+                border-left-color: #dc2626;
+                background: rgba(220, 38, 38, 0.05);
+            }
+            50% { 
+                border-left-color: #ef4444;
+                background: rgba(220, 38, 38, 0.1);
+            }
+        }
+
+        .vulnerability-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            background: rgba(220, 38, 38, 0.1);
+            color: #fca5a5;
+            border: 1px solid #7f1d1d;
+        }
+
+        .vulnerability-indicator::before {
+            content: "⚠";
+            font-size: 12px;
+        }
+
+        .device-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse-active 2s ease-in-out infinite;
+        }
+
+        .status-indicator.vulnerable {
+            background: #dc2626;
+        }
+
+        @keyframes pulse-active {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Device Details Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            overflow-y: auto;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #020617;
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #1f2937;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f1419;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #1f2937;
+            color: #e5e7eb;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-section {
+            margin-bottom: 24px;
+        }
+
+        .modal-section h3 {
+            font-size: 14px;
+            margin: 0 0 12px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .payload-history {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .payload-item {
+            background: #0f1419;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+        }
+
+        .payload-item .timestamp {
+            color: #6b7280;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        .payload-item pre {
+            margin: 0;
+            background: #000;
+            padding: 8px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 11px;
+            color: #22c55e;
+        }
+
+        .vuln-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .vuln-item {
+            background: #0f1419;
+            border-left: 3px solid #dc2626;
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .vuln-item.severity-critical {
+            border-left-color: #991b1b;
+            background: rgba(153, 27, 27, 0.05);
+        }
+
+        .vuln-item.severity-high {
+            border-left-color: #c2410c;
+            background: rgba(194, 65, 12, 0.05);
+        }
+
+        .vuln-item.severity-medium {
+            border-left-color: #a16207;
+            background: rgba(161, 98, 7, 0.05);
+        }
+
+        .vuln-item.severity-low {
+            border-left-color: #065f46;
+            background: rgba(6, 95, 70, 0.05);
+        }
+
+        .vuln-item .vuln-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .vuln-item .vuln-type {
+            font-weight: 600;
+            font-size: 13px;
+            color: #e5e7eb;
+        }
+
+        .vuln-item .vuln-message {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .vuln-item .vuln-remediation {
+            font-size: 11px;
+            color: #6b7280;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .vuln-item .vuln-remediation::before {
+            content: "💡 ";
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .risk-critical {
+            background: #991b1b;
+            color: #fecaca;
+        }
+
+        .risk-high {
+            background: #c2410c;
+            color: #fed7aa;
+        }
+
+        .risk-medium {
+            background: #a16207;
+            color: #fde68a;
+        }
+
+        .risk-low {
+            background: #065f46;
+            color: #a7f3d0;
+        }
+
+        .attack-counter {
+            font-weight: 600;
+            color: #f97316;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card {
+            background: #1a1f2e;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #1f2937;
+        }
+
+        .stat-card h3 {
+            font-size: 12px;
+            color: #9ca3af;
+            margin: 0 0 4px;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e5e7eb;
+        }
+
+        .stat-card .subtext {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .payload-cell {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 11px;
+            position: relative;
+            cursor: help;
+        }
+
+        .payload-cell:hover::after {
+            content: attr(data-full-payload);
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background: #1a1f2e;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            padding: 8px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-width: 500px;
+            z-index: 1000;
+            font-size: 11px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            color: #e5e7eb;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 1400px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 999px;
+            font-size: 11px;
+            background: #1e293b;
+            color: #e5e7eb;
+        }
+
+        .tag.bad {
+            background: #7f1d1d;
+        }
+
+        .events {
+            max-height: 280px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .event-item {
+            padding: 8px 6px;
+            border-bottom: 1px solid #1f2937;
+        }
+
+        .event-item strong {
+            color: #f97316;
+        }
+
+        .event-item time {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .pill {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #f97316;
+            color: #020617;
+            display: inline-block;
+            margin-left: 4px;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+        }
+    </style>
+
+    <!-- Socket.IO client -->
+    <script src="/static/socket.io.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header>
+    <div>
+        <h1>IoT Threat Monitoring Dashboard</h1>
+        <span>Simulated IoT Ecosystem · Real-Time Telemetry & Security Events</span>
+    </div>
+    <div>
+        <span id="connection-status" class="pill">Connecting...</span>
+    </div>
+</header>
+
+<main>
+    <!-- Telemetry chart -->
+    <section class="card">
+        <h2>Telemetry Stream <small>(last 60 points)</small></h2>
+        
+        <!-- Vulnerability Alert Banner -->
+        <div id="vuln-banner" style="display: none; background: rgba(220, 38, 38, 0.1); border: 1px solid #7f1d1d; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">⚠</span>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #fca5a5; font-size: 13px;">Security Alert</div>
+                    <div id="vuln-banner-text" style="font-size: 11px; color: #9ca3af;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <canvas id="telemetryChart" height="140"></canvas>
+    </section>
+
+    <!-- Security events -->
+    <section class="card">
+        <h2>Security Events</h2>
+        
+        <!-- Attack Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Attacks</h3>
+                <div class="value" id="total-attacks">0</div>
+                <div class="subtext">All devices</div>
+            </div>
+            <div class="stat-card">
+                <h3>Critical Events</h3>
+                <div class="value" id="critical-events" style="color: #dc2626;">0</div>
+                <div class="subtext">Immediate action needed</div>
+            </div>
+        </div>
+        
+        <div class="events" id="events"></div>
+    </section>
+
+    <!-- Device table -->
+    <section class="card" style="grid-column: 1 / span 2;">
+        <h2>Active Devices <small>(click to view telemetry • double-click for full details)</small></h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Device ID</th>
+                <th>Status</th>
+                <th class="topic-col">Last Topic</th>
+                <th>Last Payload</th>
+                <th>Attacks</th>
+                <th>Last Vulnerability</th>
+                <th>Last Seen</th>
+            </tr>
+            </thead>
+            <tbody id="device-table-body">
+            <!-- Populated dynamically -->
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<!-- Device Details Modal -->
+<div id="device-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>
+                <span class="status-indicator" id="modal-status-indicator"></span>
+                <span id="modal-device-name">Device Details</span>
+            </h2>
+            <button class="modal-close" onclick="closeDeviceModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-section">
+                <h3>Device Information</h3>
+                <div id="modal-device-info"></div>
+            </div>
+
+            <div class="modal-section">
+                <h3>Detected Vulnerabilities</h3>
+                <div id="modal-vulnerabilities" class="vuln-list"></div>
+            </div>
+
+            <div class="modal-section">
+                <h3>Recent Payloads (Last 10)</h3>
+                <div id="modal-payload-history" class="payload-history"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const connectionStatusEl = document.getElementById('connection-status');
+    const deviceTableBody = document.getElementById('device-table-body');
+    const eventsEl = document.getElementById('events');
+
+    // Keep device state in memory
+    const devices = {};
+    
+    // Store payload history for each device (last 10 payloads)
+    const devicePayloadHistory = {};
+    
+    // Track security attack statistics
+    const attackStats = {
+        total: 0,
+        critical: 0,
+        byDevice: {}, // { device_id: { count: X, lastAttack: timestamp, severity: "high", lastVulnType: "weak_credentials" } }
+        recentVulnerabilities: new Set(), // Set of device_ids with recent vulnerabilities (for visual highlighting)
+    };
+    
+    // Track selected device for telemetry
+    let selectedDeviceId = null;
+
+    // Telemetry chart state
+    const maxPoints = 60;
+    const telemetryLabels = [];
+    const telemetryData = [];
+
+    const ctx = document.getElementById('telemetryChart').getContext('2d');
+    const telemetryChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: telemetryLabels,
+            datasets: [{
+                label: 'Select a device to view telemetry',
+                data: telemetryData,
+                tension: 0.25,
+                fill: false,
+                borderColor: '#3b82f6',
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 6
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+
+    // Socket.IO connection
+    const socket = io({
+        transports: ["websocket", "polling"]
+    });
+
+    socket.on("connect_error", (err) => {
+        console.log("CONNECT ERROR:", err);
+    });
+
+    socket.on('connect', () => {
+        console.log("Connected!");
+        connectionStatusEl.textContent = 'Connected';
+        connectionStatusEl.style.background = '#22c55e';
+        connectionStatusEl.style.color = '#020617';
+    }); 
+
+    socket.on('disconnect', () => {
+        connectionStatusEl.textContent = 'Disconnected';
+        connectionStatusEl.style.background = '#7f1d1d';
+        connectionStatusEl.style.color = '#e5e7eb';
+    });
+    
+    // Handle telemetry events from backend
+    socket.on('telemetry', (event) => {
+        const { device_id, topic, payload, timestamp } = event;
+        const ts = new Date(timestamp * 1000);
+
+        // Update device map
+        devices[device_id] = {
+            topic,
+            payload,
+            lastSeen: ts
+        };
+
+        // Store payload history (last 10 payloads)
+        if (!devicePayloadHistory[device_id]) {
+            devicePayloadHistory[device_id] = [];
+        }
+        devicePayloadHistory[device_id].unshift({
+            payload: payload,
+            timestamp: ts
+        });
+        if (devicePayloadHistory[device_id].length > 10) {
+            devicePayloadHistory[device_id].pop();
+        }
+
+        renderDevices();
+
+        // Only update chart if this device is selected (or auto-select first device)
+        if (!selectedDeviceId && Object.keys(devices).length === 1) {
+            selectDevice(device_id);
+        }
+
+        if (selectedDeviceId !== device_id) {
+            return; // Skip if this isn't the selected device
+        }
+
+        // Try to extract a numeric metric for the chart based on device type
+        let value = null;
+        let metricName = 'Value';
+
+        if (payload && typeof payload === 'object') {
+            // Pick appropriate metric based on device type
+            if (payload.temperature !== undefined) {
+                value = payload.temperature;
+                metricName = 'Temperature (°C)';
+            } else if (payload.humidity !== undefined) {
+                value = payload.humidity;
+                metricName = 'Humidity (%)';
+            } else if (payload.light_level !== undefined) {
+                value = payload.light_level;
+                metricName = 'Light Level';
+            } else if (payload.locked !== undefined) {
+                value = payload.locked ? 1 : 0;
+                metricName = 'Lock Status (1=Locked, 0=Unlocked)';
+            } else if (payload.state !== undefined) {
+                value = payload.state === 'ON' ? 1 : 0;
+                metricName = 'Switch State (1=ON, 0=OFF)';
+            } else if (payload.motion_detected !== undefined) {
+                value = payload.motion_detected ? 1 : 0;
+                metricName = 'Motion Detected (1=Yes, 0=No)';
+            } else {
+                // Pick first numeric field
+                for (const [key, v] of Object.entries(payload)) {
+                    if (typeof v === 'number') {
+                        value = v;
+                        metricName = key;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (value !== null) {
+            const label = ts.toLocaleTimeString();
+
+            telemetryLabels.push(label);
+            telemetryData.push(value);
+
+            if (telemetryLabels.length > maxPoints) {
+                telemetryLabels.shift();
+                telemetryData.shift();
+            }
+
+            // Update chart label
+            telemetryChart.data.datasets[0].label = `${device_id} - ${metricName}`;
+            telemetryChart.update();
+        }
+    });
+
+    // Handle security events from backend (/api/security_event)
+    socket.on('security_event', (event) => {
+        const { type, device_id, message, details, timestamp, severity, remediation } = event;
+        const ts = timestamp ? new Date(timestamp * 1000) : new Date();
+
+        // Update attack statistics
+        attackStats.total++;
+        if (severity === 'critical') {
+            attackStats.critical++;
+        }
+
+        // Update per-device statistics
+        if (!attackStats.byDevice[device_id]) {
+            attackStats.byDevice[device_id] = {
+                count: 0,
+                lastAttack: null,
+                highestSeverity: severity || 'low',
+                lastVulnType: type,
+                recentVulns: []
+            };
+        }
+        attackStats.byDevice[device_id].count++;
+        attackStats.byDevice[device_id].lastAttack = ts;
+        attackStats.byDevice[device_id].lastVulnType = type;
+        
+        // Track recent vulnerabilities for this device (last 5)
+        if (!attackStats.byDevice[device_id].recentVulns) {
+            attackStats.byDevice[device_id].recentVulns = [];
+        }
+        attackStats.byDevice[device_id].recentVulns.unshift({
+            type: type,
+            timestamp: ts,
+            severity: severity,
+            message: message,
+            remediation: remediation,
+            details: details
+        });
+        if (attackStats.byDevice[device_id].recentVulns.length > 5) {
+            attackStats.byDevice[device_id].recentVulns.pop();
+        }
+        
+        // Track highest severity for this device
+        const severityLevels = { critical: 4, high: 3, medium: 2, low: 1 };
+        const currentLevel = severityLevels[attackStats.byDevice[device_id].highestSeverity] || 0;
+        const newLevel = severityLevels[severity] || 0;
+        if (newLevel > currentLevel) {
+            attackStats.byDevice[device_id].highestSeverity = severity;
+        }
+
+        // Mark device as recently vulnerable (visual indicator)
+        attackStats.recentVulnerabilities.add(device_id);
+        
+        // Flash effect: remove after 5 seconds
+        setTimeout(() => {
+            attackStats.recentVulnerabilities.delete(device_id);
+            renderDevices();
+        }, 5000);
+
+        // Update stats display
+        document.getElementById('total-attacks').textContent = attackStats.total;
+        document.getElementById('critical-events').textContent = attackStats.critical;
+
+        // Create event item with device correlation
+        const div = document.createElement('div');
+        div.className = 'event-item';
+        div.style.cursor = 'pointer';
+        div.title = 'Click to view device telemetry';
+
+        const typeLabel = type || 'event';
+        const msg = message || JSON.stringify(details || {});
+        const severityBadge = severity ? `<span class="risk-badge risk-${severity}">${severity.toUpperCase()}</span>` : '';
+
+        div.innerHTML = `
+            <div>
+                <strong>${typeLabel}</strong>
+                ${device_id ? `<span class="tag">Device: ${device_id}</span>` : ''}
+                ${severityBadge}
+            </div>
+            <div>${msg}</div>
+            <time>${ts.toLocaleTimeString()}</time>
+        `;
+
+        // Click event to select affected device
+        div.addEventListener('click', () => {
+            if (device_id) {
+                selectDevice(device_id);
+                // Scroll to device table
+                document.querySelector('.card:has(#device-table-body)').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+            }
+        });
+
+        eventsEl.prepend(div);
+
+        // Keep list from growing forever
+        while (eventsEl.children.length > 100) {
+            eventsEl.removeChild(eventsEl.lastChild);
+        }
+
+        // Update device table to show new attack count and vulnerability indicator
+        renderDevices();
+    });
+
+    function selectDevice(deviceId) {
+        selectedDeviceId = deviceId;
+        
+        // Clear chart data when switching devices
+        telemetryLabels.length = 0;
+        telemetryData.length = 0;
+        
+        // Update chart title
+        telemetryChart.data.datasets[0].label = `${deviceId} - Loading...`;
+        telemetryChart.update();
+        
+        // Check if device has vulnerabilities and show banner
+        const deviceStats = attackStats.byDevice[deviceId];
+        const vulnBanner = document.getElementById('vuln-banner');
+        const vulnBannerText = document.getElementById('vuln-banner-text');
+        
+        if (deviceStats && deviceStats.count > 0) {
+            // Show vulnerability banner
+            vulnBanner.style.display = 'block';
+            const recentVulns = deviceStats.recentVulns || [];
+            const vulnTypes = recentVulns.slice(0, 3).map(v => v.type.replace(/_/g, ' ')).join(', ');
+            vulnBannerText.textContent = `This device has ${deviceStats.count} detected vulnerabilities (${deviceStats.highestSeverity} severity). Recent: ${vulnTypes}`;
+        } else {
+            // Hide vulnerability banner
+            vulnBanner.style.display = 'none';
+        }
+        
+        // Update device table styling
+        renderDevices();
+    }
+
+    function renderDevices() {
+        deviceTableBody.innerHTML = '';
+
+        Object.entries(devices).forEach(([id, info]) => {
+            const { topic, payload, lastSeen } = info;
+            const tr = document.createElement('tr');
+
+            // Highlight selected device
+            if (id === selectedDeviceId) {
+                tr.classList.add('selected');
+            }
+
+            // Get attack statistics for this device
+            const deviceStats = attackStats.byDevice[id];
+            const attackCount = deviceStats ? deviceStats.count : 0;
+            const lastVulnType = deviceStats && deviceStats.lastVulnType ? deviceStats.lastVulnType : null;
+            const severity = deviceStats ? deviceStats.highestSeverity : 'low';
+            const isRecentlyVulnerable = attackStats.recentVulnerabilities.has(id);
+
+            // Add vulnerable class for visual highlighting
+            if (attackCount > 0) {
+                tr.classList.add('vulnerable-device');
+            }
+
+            const payloadText = typeof payload === 'object'
+                ? JSON.stringify(payload)
+                : String(payload);
+            
+            // Truncate payload for display
+            const shortPayload = payloadText.length > 80 
+                ? payloadText.substring(0, 80) + '...' 
+                : payloadText;
+
+            // Status indicator (green = active, red = vulnerable)
+            const statusClass = attackCount > 0 ? 'vulnerable' : '';
+            const statusText = attackCount > 0 ? 'Vulnerable' : 'Active';
+            const statusColor = attackCount > 0 ? '#dc2626' : '#22c55e';
+
+            // Display attack count with risk badge
+            const attackDisplay = attackCount > 0 
+                ? `<span class="attack-counter">${attackCount}</span> <span class="risk-badge risk-${severity}">${severity}</span>`
+                : '<span style="color: #6b7280;">0</span>';
+
+            // Display last vulnerability type
+            const vulnDisplay = lastVulnType 
+                ? `<span class="vulnerability-indicator">${lastVulnType.replace(/_/g, ' ')}</span>`
+                : '<span style="color: #6b7280; font-size: 11px;">None detected</span>';
+
+            tr.innerHTML = `
+                <td>
+                    <div class="device-status">
+                        <span class="status-indicator ${statusClass}"></span>
+                        <strong>${id}</strong>
+                    </div>
+                </td>
+                <td style="color: ${statusColor}; font-size: 11px; font-weight: 600;">${statusText}</td>
+                <td style="font-size: 10px; color: #9ca3af;">${topic.split('/').slice(-2).join('/')}</td>
+                <td class="payload-cell" data-full-payload="${payloadText}"><code>${shortPayload}</code></td>
+                <td>${attackDisplay}</td>
+                <td>${vulnDisplay}</td>
+                <td style="font-size: 11px;">${lastSeen.toLocaleTimeString()}</td>
+            `;
+
+            // Add click handler to show device details modal (right-click or ctrl+click)
+            tr.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                openDeviceModal(id);
+            });
+
+            // Double-click to show modal
+            tr.addEventListener('dblclick', () => {
+                openDeviceModal(id);
+            });
+
+            // Single click to select device for telemetry
+            tr.addEventListener('click', (e) => {
+                // Only select if not right-click or double-click
+                if (e.detail === 1) {
+                    selectDevice(id);
+                }
+            });
+
+            deviceTableBody.appendChild(tr);
+        });
+    }
+
+    function openDeviceModal(deviceId) {
+        const modal = document.getElementById('device-modal');
+        const deviceInfo = devices[deviceId];
+        const deviceStats = attackStats.byDevice[deviceId];
+
+        if (!deviceInfo) return;
+
+        // Update modal header
+        document.getElementById('modal-device-name').textContent = deviceId;
+        const statusIndicator = document.getElementById('modal-status-indicator');
+        statusIndicator.className = 'status-indicator ' + (deviceStats && deviceStats.count > 0 ? 'vulnerable' : '');
+
+        // Device information
+        const infoHtml = `
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
+                <div>
+                    <div style="color: #6b7280; font-size: 11px;">Status</div>
+                    <div style="font-weight: 600; color: ${deviceStats && deviceStats.count > 0 ? '#dc2626' : '#22c55e'};">
+                        ${deviceStats && deviceStats.count > 0 ? 'Vulnerable' : 'Active'}
+                    </div>
+                </div>
+                <div>
+                    <div style="color: #6b7280; font-size: 11px;">Attack Count</div>
+                    <div style="font-weight: 600;">${deviceStats ? deviceStats.count : 0}</div>
+                </div>
+                <div>
+                    <div style="color: #6b7280; font-size: 11px;">Last Topic</div>
+                    <div style="font-size: 11px; color: #9ca3af;">${deviceInfo.topic}</div>
+                </div>
+                <div>
+                    <div style="color: #6b7280; font-size: 11px;">Last Seen</div>
+                    <div style="font-size: 11px;">${deviceInfo.lastSeen.toLocaleString()}</div>
+                </div>
+            </div>
+        `;
+        document.getElementById('modal-device-info').innerHTML = infoHtml;
+
+        // Vulnerabilities
+        const vulnContainer = document.getElementById('modal-vulnerabilities');
+        if (deviceStats && deviceStats.recentVulns && deviceStats.recentVulns.length > 0) {
+            const vulnHtml = deviceStats.recentVulns.map(vuln => {
+                const severity = vuln.severity || 'low';
+                return `
+                    <div class="vuln-item severity-${severity}">
+                        <div class="vuln-header">
+                            <span class="vuln-type">${vuln.type.replace(/_/g, ' ')}</span>
+                            <span class="risk-badge risk-${severity}">${severity.toUpperCase()}</span>
+                        </div>
+                        <div class="vuln-message">${vuln.message || 'No details available'}</div>
+                        <div style="color: #6b7280; font-size: 11px;">
+                            Detected: ${vuln.timestamp.toLocaleString()}
+                        </div>
+                        ${vuln.remediation ? `<div class="vuln-remediation">${vuln.remediation}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            vulnContainer.innerHTML = vulnHtml;
+        } else {
+            vulnContainer.innerHTML = '<div style="color: #6b7280; font-size: 13px; padding: 12px; text-align: center;">No vulnerabilities detected</div>';
+        }
+
+        // Payload history
+        const historyContainer = document.getElementById('modal-payload-history');
+        const history = devicePayloadHistory[deviceId] || [];
+        
+        if (history.length > 0) {
+            const historyHtml = history.map(item => {
+                const payloadStr = JSON.stringify(item.payload, null, 2);
+                return `
+                    <div class="payload-item">
+                        <div class="timestamp">${item.timestamp.toLocaleString()}</div>
+                        <pre>${payloadStr}</pre>
+                    </div>
+                `;
+            }).join('');
+            historyContainer.innerHTML = historyHtml;
+        } else {
+            historyContainer.innerHTML = '<div style="color: #6b7280; font-size: 13px; padding: 12px; text-align: center;">No payload history available</div>';
+        }
+
+        // Show modal
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDeviceModal() {
+        const modal = document.getElementById('device-modal');
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('device-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeviceModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDeviceModal();
+        }
+    });
+</script>
+</body>
+</html>
