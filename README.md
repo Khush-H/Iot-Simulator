@@ -143,11 +143,3 @@ Functional testing was performed using a black-box methodology. To verify vulner
 
 This project is strictly for **educational and research purposes**. All simulations are conducted in a controlled, offline environment. Do **not** use this tool against real networks or physical devices without explicit authorisation.
 
----
-
-## 👤 Author
-
-**Khush Naran Hirani**  
-TP073863 | APD3F2505CS(CYB)  
-Supervisor: Assoc. Prof. Dr. Jalil Md Desa  
-Asia Pacific University of Technology and Innovation
